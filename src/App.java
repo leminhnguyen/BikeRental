@@ -1,20 +1,12 @@
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
-import java.util.logging.Level; 
-import java.util.logging.Logger; 
-import java.util.logging.*; 
+import java.util.logging.Logger;
 
-import bike.*;
-import park.*;
+import utils.Configs;
 import utils.Utils;
 
 public class App {
 
-    private static Logger LOGGER = null;
+    private static Logger LOGGER;
 
     static {
         System.setProperty("java.util.logging.SimpleFormatter.format",
@@ -56,7 +48,7 @@ public class App {
         // for (int i=0; i<bikes1.size(); i++){
         //     ((SingleBike) bikes1.get(i)).displayInfo();
         // }
-        Utils.readBarCode("barcode");
+        Utils.post(Configs.DECREASE_BALANCE, Configs.POST_DATA, Configs.TOKEN);
 
     }
 }

@@ -1,63 +1,105 @@
 package utils;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Arrays;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.io.*;
-import java.net.*;
+import java.util.logging.Logger;
+
 
 public class Utils {
 
     public static DateFormat DATE_FORMATER = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-    public static final String POST_URL = "https://ecopark-system-api.herokuapp.com/api/card/balance/118609_group1_2020";
-    public static final String POST_DATA = "{\"userId\": 100,\"id\": 100,\"title\": \"main title\",\"body\": \"main body\"}";
+    private static Logger LOGGER;
+    static {
+        System.setProperty("java.util.logging.SimpleFormatter.format",
+                "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+        LOGGER = Logger.getLogger(Utils.class.getName());
+    }
     
     public static long getMinutes(Date date1, Date date2){
         return TimeUnit.MILLISECONDS.toMinutes(date2.getTime()-date1.getTime());
     }
 
-    public static void readBarCode(String barcode) throws Exception{
-
-        String[] details = {};
-        System.out.println(Arrays.toString(details));
-
-        URL line_api_url = new URL(POST_URL);
-        String payload = POST_DATA;
-
-        HttpURLConnection linec = (HttpURLConnection) line_api_url
-                .openConnection();
-        linec.setDoInput(true);
-        linec.setDoOutput(true);
-        linec.setRequestMethod("GET");
-        linec.setRequestProperty("Content-Type", "application/json");
-        linec.setRequestProperty("Authorization", "Bearer "
-                + "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiIxMTg2MDlfZ3JvdXAxXzIwMjAiLCJpYXQiOjE1OTkxMTk5NDl9.y81pBkM0pVn31YDPFwMGXXkQRKW5RaPIJ5WW5r9OW-Y");
-
-        // OutputStreamWriter writer = new OutputStreamWriter(
-        //         linec.getOutputStream(), "UTF-8");
-        // writer.write(payload);
-
+    public static String get(String url, String token) throws Exception{
+        LOGGER.info("Request URL: " + url + "\n");
+        URL line_api_url = new URL(url);
+        HttpURLConnection conn = (HttpURLConnection) line_api_url.openConnection();
+        conn.setDoInput(true);
+        conn.setDoOutput(true);
+        conn.setRequestMethod("GET");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Authorization", "Bearer " + token);
         BufferedReader in = new BufferedReader(new InputStreamReader(
-                linec.getInputStream()));
-        String inputLine;
-
+            conn.getInputStream()));
+        String inputLine; 
+        StringBuilder respone = new StringBuilder(); // ising StringBuilder for memory and performance
         while ((inputLine = in.readLine()) != null)
             System.out.println(inputLine);
+            respone.append(inputLine + "\n");
         in.close();
+        LOGGER.info("Respone Info: " + respone.substring(0, respone.length()-1).toString());
+        return respone.substring(0, respone.length()-1).toString();
     }
 
-    public static void main(String[] args) {
+    public static void post(String url, String data, String token) throws Exception{
+        allowMethods("PATCH");
+        URL line_api_url = new URL(url);
+        String payload = data;
+        LOGGER.info("Request Info:\nRequest URL: " + url + "\n" + "Payload Data: " + payload + "\n");
+        HttpURLConnection conn = (HttpURLConnection) line_api_url.openConnection();
+        conn.setDoInput(true);
+        conn.setDoOutput(true);
+        conn.setRequestMethod("PATCH");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Authorization", "Bearer " + token);
+        Writer writer = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()));
+        writer.write(payload);
+        writer.close();
+        BufferedReader in; String inputLine;
+        if (conn.getResponseCode() / 100 == 2){
+            in = new BufferedReader(new InputStreamReader( conn.getInputStream() ));
+        }else {
+            in = new BufferedReader(new InputStreamReader( conn.getErrorStream() ));  
+        }
+        StringBuilder respone =  new StringBuilder();
+        while ((inputLine = in.readLine()) != null)
+            respone.append(inputLine);
+        in.close();
+        LOGGER.info("Respone Info: " + respone.toString());
+       
+    }
+
+    private static void allowMethods(String... methods) {
         try {
-            readBarCode("barcode");
-        } catch (Exception e) {
-            System.out.println("error");
+            Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
+
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
+
+            methodsField.setAccessible(true);
+
+            String[] oldMethods = (String[]) methodsField.get(null);
+            Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));
+            methodsSet.addAll(Arrays.asList(methods));
+            String[] newMethods = methodsSet.toArray(new String[0]);
+
+            methodsField.set(null/*static field*/, newMethods);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalStateException(e);
         }
     }
 }
