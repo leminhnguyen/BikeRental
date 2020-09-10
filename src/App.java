@@ -4,6 +4,11 @@ import java.util.logging.Logger;
 import utils.Configs;
 import utils.Utils;
 
+
+/**
+ * @author DELL
+ *
+ */
 public class App {
 
     private static Logger LOGGER;
@@ -13,7 +18,12 @@ public class App {
                 "[%1$tF %1$tT] [%4$-7s] %5$s %n");
         LOGGER = Logger.getLogger(App.class.getName());
     }
-
+    
+    
+    /**
+     * @param time
+     * @return
+     */
     public static String toTimeStr(Date time) {
         int hour = time.getHours();
         int min = time.getMinutes();
